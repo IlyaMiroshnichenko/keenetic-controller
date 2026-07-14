@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew *)",
+      "Bash(java *)",
+      "Bash(/usr/libexec/java_home *)",
+      "Bash(ls *)",
+      "Bash(which *)",
+      "Bash(/usr/bin/java *)",
+      "Bash(brew *)"
+    ]
+  },
+  "$version": 3
+}

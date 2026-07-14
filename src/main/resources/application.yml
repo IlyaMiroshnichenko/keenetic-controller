@@ -1,0 +1,4 @@
+keenetic:
+  ip: ${KEENETIC_IP}
+  login: ${KEENETIC_LOGIN}
+  password: ${KEENETIC_PASSWORD}
