@@ -1,36 +1,38 @@
 package com.keenetic.controller;
 
-import com.keenetic.service.KeeneticClient;
-import org.springframework.http.HttpHeaders;
+import com.keenetic.dto.UsbLteInterfaceDto;
+import com.keenetic.service.KeeneticClientService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Slf4j
 public class KeeneticRestController {
 
-    private final KeeneticClient keeneticClient;
+    private final KeeneticClientService keeneticClientService;
 
-    public KeeneticRestController(KeeneticClient keeneticClient) {
-        this.keeneticClient = keeneticClient;
+    public KeeneticRestController(KeeneticClientService keeneticClientService) {
+        this.keeneticClientService = keeneticClientService;
     }
 
-    // Явно указываем производимый контент JSON в UTF-8
-    @GetMapping(value = "/router-api/show-hosts", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<String> getHosts() {
+    @GetMapping(value = "/keenetic/api/v1/getMobileSignalInfo", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<Object> getMobileSignalInfo() {
         try {
-            String result = keeneticClient.getHostsCommand();
+            log.info("Request mobile signal information.");
+            UsbLteInterfaceDto result = keeneticClientService.getMobileSignalInfo();
 
-            if (result == null || result.isEmpty()) {
-                System.out.println("[ВНИМАНИЕ] Роутер вернул статус 200, но тело по-прежнему пустое.");
-                return ResponseEntity.ok("{}");
+            if (result == null) {
+                log.warn("Router returns OK, but body is empty.");
+                return new ResponseEntity<>(HttpStatus.OK);
             }
 
-            System.out.println("[УСПЕХ] Данные hotspot получены! Длина: " + result.length());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("{\"error\":\"" + e.getMessage() + "\"}");
+            log.error("Error during request", e);
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

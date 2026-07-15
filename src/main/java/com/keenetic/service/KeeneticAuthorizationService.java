@@ -1,6 +1,7 @@
 package com.keenetic.service;
 
 import com.keenetic.dto.AuthDataDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class KeeneticAuthorizationService {
 
     private static final String FIXED_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) KeeneticClient/1.0";
@@ -30,7 +32,7 @@ public class KeeneticAuthorizationService {
 
     public AuthDataDto getAuthData() throws Exception {
         String urlAuth = "http://" + routerIp + "/auth";
-
+        log.info("Request auth data...");
         // Создаем чистый клиент БЕЗ CookieManager, чтобы избежать магии потоков Spring Boot
         HttpClient client = HttpClient.newBuilder()
                 .proxy(HttpClient.Builder.NO_PROXY)
@@ -38,24 +40,25 @@ public class KeeneticAuthorizationService {
                 .build();
 
         // --- ШАГ 1: Challenge ---
-        HttpRequest request1 = HttpRequest.newBuilder()
+        HttpRequest requestChallenge = HttpRequest.newBuilder()
                 .uri(URI.create(urlAuth))
                 .header("User-Agent", FIXED_USER_AGENT)
                 .GET()
                 .build();
-
-        HttpResponse<String> response1 = client.send(request1, HttpResponse.BodyHandlers.ofString());
-
+        log.info("Request auth challenge.");
+        HttpResponse<String> responseChallenge = client.send(requestChallenge, HttpResponse.BodyHandlers.ofString());
+        log.info("Received auth challenge.");
         // Извлекаем сырую куку сессии, которую выдал роутер
-        List<String> setCookies = response1.headers().allValues("Set-Cookie");
+        List<String> setCookies = responseChallenge.headers().allValues("Set-Cookie");
         String keeneticCookie = setCookies.isEmpty() ? "" : setCookies.getFirst().split(";")[0];
 
-        Optional<String> challengeOpt = response1.headers().firstValue("X-NDM-Challenge")
-                .or(() -> response1.headers().firstValue("x-ndm-challenge"));
-        Optional<String> realmOpt = response1.headers().firstValue("X-NDM-Realm")
-                .or(() -> response1.headers().firstValue("x-ndm-realm"));
+        Optional<String> challengeOpt = responseChallenge.headers().firstValue("X-NDM-Challenge")
+                .or(() -> responseChallenge.headers().firstValue("x-ndm-challenge"));
+        Optional<String> realmOpt = responseChallenge.headers().firstValue("X-NDM-Realm")
+                .or(() -> responseChallenge.headers().firstValue("x-ndm-realm"));
 
         if (challengeOpt.isEmpty()) {
+            log.error("Router did not return challenge header.");
             throw new RuntimeException("Роутер не вернул заголовок Challenge.");
         }
 
@@ -63,31 +66,36 @@ public class KeeneticAuthorizationService {
         String realm = realmOpt.orElse("Keenetic");
 
         // --- ШАГ 2: Хэш ---
+        log.info("Calculating hash...");
         String step1String = login + ":" + realm + ":" + password;
         String md5Hash = getHash(step1String, "MD5");
         String step2String = challenge + md5Hash;
         String sha256Hash = getHash(step2String, "SHA-256");
+        log.info("Successful hash calculation.");
 
         // --- ШАГ 3: Авторизация (Передаем куку строкой) ---
         String authJson = String.format("{\"login\":\"%s\",\"password\":\"%s\"}", login, sha256Hash);
-        HttpRequest.Builder req2Builder = HttpRequest.newBuilder()
+        HttpRequest.Builder requestAuth = HttpRequest.newBuilder()
                 .uri(URI.create(urlAuth))
                 .header("User-Agent", FIXED_USER_AGENT)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(authJson));
 
         if (!keeneticCookie.isEmpty()) {
-            req2Builder.header("Cookie", keeneticCookie);
+            requestAuth.header("Cookie", keeneticCookie);
         }
 
-        HttpResponse<String> response2 = client.send(req2Builder.build(), HttpResponse.BodyHandlers.ofString());
+        log.info("Send auth cookie...");
+        HttpResponse<String> responseAuth = client.send(requestAuth.build(), HttpResponse.BodyHandlers.ofString());
 
-        if (response2.statusCode() != 200) {
-            throw new RuntimeException("Ошибка авторизации Keenetic: " + response2.statusCode());
+        if (responseAuth.statusCode() != 200) {
+            log.error("Authorization failed: {}, body: {}", responseAuth.statusCode(), responseAuth.body());
+            throw new RuntimeException("Authorization failed: " + responseAuth.statusCode());
         }
 
+        log.info("Auth cookie received.");
         // Если после логина Keenetic обновил сессию — берем свежую куку
-        List<String> authCookies = response2.headers().allValues("Set-Cookie");
+        List<String> authCookies = responseAuth.headers().allValues("Set-Cookie");
         if (!authCookies.isEmpty()) {
             keeneticCookie = authCookies.getFirst().split(";")[0];
         }
