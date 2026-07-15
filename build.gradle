@@ -28,7 +28,7 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
-    implementation 'com.github.mwiede:jsch:0.2.22'
+    implementation 'org.telegram:telegrambots-spring-boot-starter:6.9.7.1'
 }
 
 tasks.named('test') {

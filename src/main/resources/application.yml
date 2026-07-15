@@ -2,8 +2,16 @@ keenetic:
   ip: ${KEENETIC_IP}
   login: ${KEENETIC_LOGIN}
   password: ${KEENETIC_PASSWORD}
+  signal-thresholds:
+    min-rsrp: -105
+    min-sinr: 5
 logging:
   level:
-    com:
-      keenetic:
-        service: error
+    com.keenetic.service: info
+    com.keenetic.service.KeeneticAuthorizationService: error
+    com.keenetic.service.KeeneticClientService: error
+telegram:
+  bot:
+    name: ${TELEGRAM_BOT_NAME}
+    token: ${TELEGRAM_BOT_TOKEN}
+  admin-chat-id: ${ADMIN_ID}
