@@ -18,6 +18,7 @@ services:
       - TELEGRAM_BOT_NAME=${TELEGRAM_BOT_NAME}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_ID=${ADMIN_ID}
+      - TZ=Europe/Moscow
     depends_on:
       - postgres
 
