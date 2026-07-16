@@ -41,6 +41,8 @@ services:
     image: grafana/grafana-oss:latest
     container_name: keenetic-grafana
     restart: always
+    environment:
+      - TZ=Europe/Moscow
     ports:
       - "3000:3000" # Доступна по адресу http://<IP_VDS>:3000
     volumes:
