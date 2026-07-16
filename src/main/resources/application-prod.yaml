@@ -1,14 +1,9 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:5432/keenetic_metrics?serverTimezone=Europe/Moscow
+    url: jdbc:postgresql://${DB_HOST:postgres}:5432/keenetic_metrics
     username: ${DB_USER:keenetic_admin}
     password: ${DB_PASSWORD:SuperSecretPassword123}
   jpa:
     hibernate:
       ddl-auto: update # На сервере таблицы создаются автоматически, но данные никогда не стираются
     show-sql: false
-    properties:
-      hibernate:
-        # Указываем Hibernate принудительно использовать часовой пояс Москвы для всех LocalDateTime
-        jdbc:
-          time_zone: Europe/Moscow
