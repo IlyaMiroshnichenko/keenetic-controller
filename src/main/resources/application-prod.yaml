@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/keenetic_metrics
+    username: ${DB_USER:keenetic_admin}
+    password: ${DB_PASSWORD:SuperSecretPassword123}
+  jpa:
+    hibernate:
+      ddl-auto: update # На сервере таблицы создаются автоматически, но данные никогда не стираются
+    show-sql: false

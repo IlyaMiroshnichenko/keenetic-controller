@@ -1,5 +1,7 @@
 package com.keenetic.service;
 
+import com.keenetic.entity.SignalMetric;
+import com.keenetic.repository.SignalMetricRepository;
 import com.keenetic.telegram.KeeneticTelegramBot;
 import com.keenetic.dto.UsbLteInterfaceDto;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import org.springframework.util.StringUtils;
 public class SignalMonitoringService {
 
     private final KeeneticClientService keeneticClientService;
+    private final SignalMetricRepository signalMetricRepository;
     private final KeeneticTelegramBot telegramBot;
 
     @Value("${keenetic.signal-thresholds.min-rsrp}")
@@ -24,8 +27,9 @@ public class SignalMonitoringService {
     @Value("${telegram.admin-chat-id}")
     private long adminChatId;
 
-    public SignalMonitoringService(KeeneticClientService keeneticClientService, KeeneticTelegramBot telegramBot) {
+    public SignalMonitoringService(KeeneticClientService keeneticClientService, SignalMetricRepository signalMetricRepository, KeeneticTelegramBot telegramBot) {
         this.keeneticClientService = keeneticClientService;
+        this.signalMetricRepository = signalMetricRepository;
         this.telegramBot = telegramBot;
     }
 
@@ -38,18 +42,21 @@ public class SignalMonitoringService {
             // Вызываем ваш рабочий метод
             UsbLteInterfaceDto mobileInfo = keeneticClientService.getMobileSignalInfo();
 
+            log.info("Метрики сигнала успешно сохранены в базу данных.");
+
             if (mobileInfo == null) {
                 log.warn("Метрики LTE не получены от роутера (интерфейс пуст или lte=null)");
                 return;
             }
 
-            if (!StringUtils.hasLength(mobileInfo.rsrp()) || !StringUtils.hasLength(mobileInfo.sinr())) {
-                log.warn("В JSON роутера отсутствуют ключи rsrp или sinr");
-                return;
-            }
-
             int currentRsrp = Integer.parseInt(mobileInfo.rsrp());
             int currentSinr = Integer.parseInt(mobileInfo.sinr());
+            int currentRsrq = Integer.parseInt(mobileInfo.rsrq());
+            int currentRssi = Integer.parseInt(mobileInfo.rssi());
+
+            SignalMetric metric = new SignalMetric(currentRsrp, currentSinr, currentRsrq, currentRssi);
+            signalMetricRepository.save(metric);
+            log.info("Метрики сигнала успешно сохранены в базу данных.");
 
             log.debug("Плановый замер: RSRP = {} dBm, SINR = {} dB", currentRsrp, currentSinr);
 
