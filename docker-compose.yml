@@ -65,6 +65,7 @@ services:
       - JAVA_OPTS=-Xmx1532m # Жестко ограничиваем аппетит Java для Jenkins, сохраняя ОЗУ
     volumes:
       - jenkins-data:/var/jenkins_home
+      - /home/keenetic-controller:/home/keenetic-controller
       # Пробрасываем исполняемые файлы и сокет докера с VDS внутрь контейнера Дженкинса.
       # Это позволит Jenkins выполнять сборку 'docker compose build' локально на сервере!
       - /var/run/docker.sock:/var/run/docker.sock
