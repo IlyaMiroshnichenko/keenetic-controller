@@ -30,29 +30,24 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
+            @Value("${telegram.base.url:https://telegram.org}") String baseUrl, // <-- ПЕРЕНЕСЛИ ВНЕДРЕНИЕ СЮДА!
             KeeneticClientService keeneticClientService) {
 
-        super(botToken); // Оставляем ваш стандартный рабочий вызов токена первой строкой
-
+        super(botToken);
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
-        // МУДРОСТЬ: Если в настройках передан кастомный URL Cloudflare —
-        // библиотека Telegram начнет слать HTTPS запросы через него!
+        // Перезаписываем поле класса локальной переменной
+        this.baseUrl = baseUrl;
+
+        // Теперь baseUrl гарантированно НЕ null и содержит ваш адрес Cloudflare!
         if (baseUrl != null && !baseUrl.contains("api.telegram.org")) {
             getOptions().setBaseUrl(baseUrl);
+            log.info("Родительские опции успешно переключены на URL: {}", baseUrl);
         }
 
         log.info("Telegram бот '{}' успешно инициализирован через Cloudflare-релей.", botName);
     }
-
-    // Убедитесь, что у вас в коде поле botToken объявлено и метод getBotToken() возвращает его:
-//    private final String botToken;
-//
-//    @Override
-//    public String getBotToken() {
-//        return this.botToken;
-//    }
 
 
 
