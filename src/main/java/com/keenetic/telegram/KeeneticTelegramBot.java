@@ -5,7 +5,6 @@ import com.keenetic.service.KeeneticClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -25,30 +24,22 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
     private final String botName;
     private final KeeneticClientService keeneticClientService;
 
+    // Идеальный конструктор для работы напрямую или через системный DNS AntiZapret
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
-            @Value("${telegram.base.url:https://telegram.org}") String baseUrl,
             KeeneticClientService keeneticClientService) {
 
-        // Передаем в super объект опций с нашим незашифрованным HTTP URL
-        super(createBotOptions(baseUrl));
-
+        // Передаем токен в родительский класс для инициализации HttpClient
+        super(botToken);
         this.botToken = botToken;
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
-        log.info("Telegram бот успешно переключен на HTTP-туннель: {}", baseUrl);
+        log.info("Telegram бот '{}' успешно инициализирован.", botName);
     }
 
-    private static DefaultBotOptions createBotOptions(String baseUrl) {
-        DefaultBotOptions options = new DefaultBotOptions();
-        if (baseUrl != null && !baseUrl.contains("api.telegram.org")) {
-            options.setBaseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
-        }
-        return options;
-    }
-
+    // КРИТИЧЕСКИ ВАЖНО: Библиотека 6.х обязана брать токен отсюда при выполнении методов!
     @Override
     public String getBotToken() {
         return this.botToken;
