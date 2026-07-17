@@ -5,7 +5,6 @@ import com.keenetic.service.KeeneticClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -24,29 +23,15 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
     private final String botName;
     private final KeeneticClientService keeneticClientService;
 
-    // Внедряем настройки, включая DefaultBotOptions
+    // Внедряем настройки из application.yml
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
-            KeeneticClientService keeneticClientService,
-            DefaultBotOptions options) {
-
-        super(options); // <--- 1. Передаем опции прокси в родительский класс!
-
-        // 2. Токен теперь сохраняем локально, библиотека сама заберет его через ваш метод getBotToken()
-        this.botToken = botToken;
+            KeeneticClientService keeneticClientService) {
+        super(botToken); // Передаем токен в родительский класс
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
-
-        log.info("Telegram бот '{}' успешно инициализирован с поддержкой прокси.", botName);
-    }
-
-    // Убедитесь, что у вас в коде поле botToken объявлено и метод getBotToken() возвращает его:
-    private final String botToken;
-
-    @Override
-    public String getBotToken() {
-        return this.botToken;
+        log.info("Telegram бот '{}' успешно инициализирован.", botName);
     }
 
 
