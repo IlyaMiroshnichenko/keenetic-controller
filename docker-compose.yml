@@ -1,22 +1,16 @@
 services:
-  # --- ДОБАВЛЯЕМ НЕУЯЗВИМЫЙ ЛОКАЛЬНЫЙ ПРОКСИ ---
-  telegram-proxy:
-    image: alpine/socat
-    container_name: keenetic-telegram-proxy
-    restart: always
-    # Команда перенаправляет трафик из контейнера бота в Telegram
-    # через защищенный AntiZapret IP-шлюз на полной скорости
-    command: tcp-listen:80,fork tcp-connect:api.telegram.org:443
-
   # 1. Ваше Spring Boot приложение (Телеграм-бот и замерщик)
   app:
-    build: .
+    build: . # Docker соберет образ на основе вашего Dockerfile в текущей папке
     container_name: keenetic-app
     restart: always
+    dns:
+      - 195.123.220.117 # Официальный DNS-сервер AntiZapret
+      - 8.8.8.8
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=postgres # Автоматический DNS докера: свяжет Java с контейнером БД по имени
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - KEENETIC_IP=${KEENETIC_IP}
@@ -26,12 +20,8 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_ID=${ADMIN_ID}
       - TZ=Europe/Moscow
-      # --- МАГИЯ: Указываем Java использовать наш локальный прокси для обхода RUVDS ---
-      - JAVA_TOOL_OPTIONS=-Dhttps.proxyHost=telegram-proxy -Dhttps.proxyPort=80
     depends_on:
       - postgres
-      - telegram-proxy # Ждем старта локального прокси
-
 
   # 2. База данных PostgreSQL (Хранение истории метрик 4G сигнала)
   postgres:
