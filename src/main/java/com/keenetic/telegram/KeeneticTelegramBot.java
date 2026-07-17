@@ -21,38 +21,32 @@ import java.util.List;
 @Slf4j
 public class KeeneticTelegramBot extends TelegramLongPollingBot {
 
-    private final String botToken;
     private final String botName;
     private final KeeneticClientService keeneticClientService;
+
+    @Value("${telegram.base.url:https://telegram.org}")
+    private String baseUrl;
 
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
-            @Value("${telegram.base.url:https://telegram.org}") String baseUrl, // По умолчанию официальный URL со слэшем
+            @Value("${telegram.base.url:https://telegram.org}") String baseUrl, // <-- ПЕРЕНЕСЛИ ВНЕДРЕНИЕ СЮДА!
             KeeneticClientService keeneticClientService) {
 
-        // Передаем в super объект опций с нашим Cloudflare URL
-        super(createBotOptions(baseUrl));
-
-        this.botToken = botToken;
+        super(botToken);
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
-        log.info("Telegram бот '{}' запущен через умное Cloudflare-зеркало.", botName);
-    }
+        // Перезаписываем поле класса локальной переменной
+        this.baseUrl = baseUrl;
 
-    private static DefaultBotOptions createBotOptions(String baseUrl) {
-        DefaultBotOptions options = new DefaultBotOptions();
-        // В версии 6.х метод setBaseUrl строго требует, чтобы адрес заканчивался на слэш /
+        // Теперь baseUrl гарантированно НЕ null и содержит ваш адрес Cloudflare!
         if (baseUrl != null && !baseUrl.contains("api.telegram.org")) {
-            options.setBaseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
+            getOptions().setBaseUrl(baseUrl);
+            log.info("Родительские опции успешно переключены на URL: {}", baseUrl);
         }
-        return options;
-    }
 
-    @Override
-    public String getBotToken() {
-        return this.botToken;
+        log.info("Telegram бот '{}' успешно инициализирован через Cloudflare-релей.", botName);
     }
 
 
