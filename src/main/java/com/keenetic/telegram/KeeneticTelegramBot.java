@@ -21,32 +21,38 @@ import java.util.List;
 @Slf4j
 public class KeeneticTelegramBot extends TelegramLongPollingBot {
 
+    private final String botToken;
     private final String botName;
     private final KeeneticClientService keeneticClientService;
-
-    @Value("${telegram.base.url:https://telegram.org}")
-    private String baseUrl;
 
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
-            @Value("${telegram.base.url:https://telegram.org}") String baseUrl, // <-- ПЕРЕНЕСЛИ ВНЕДРЕНИЕ СЮДА!
+            @Value("${telegram.base.url:https://telegram.org}") String baseUrl, // По умолчанию официальный URL со слэшем
             KeeneticClientService keeneticClientService) {
 
-        super(botToken);
+        // Передаем в super объект опций с нашим Cloudflare URL
+        super(createBotOptions(baseUrl));
+
+        this.botToken = botToken;
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
-        // Перезаписываем поле класса локальной переменной
-        this.baseUrl = baseUrl;
+        log.info("Telegram бот '{}' запущен через умное Cloudflare-зеркало.", botName);
+    }
 
-        // Теперь baseUrl гарантированно НЕ null и содержит ваш адрес Cloudflare!
+    private static DefaultBotOptions createBotOptions(String baseUrl) {
+        DefaultBotOptions options = new DefaultBotOptions();
+        // В версии 6.х метод setBaseUrl строго требует, чтобы адрес заканчивался на слэш /
         if (baseUrl != null && !baseUrl.contains("api.telegram.org")) {
-            getOptions().setBaseUrl(baseUrl);
-            log.info("Родительские опции успешно переключены на URL: {}", baseUrl);
+            options.setBaseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
         }
+        return options;
+    }
 
-        log.info("Telegram бот '{}' успешно инициализирован через Cloudflare-релей.", botName);
+    @Override
+    public String getBotToken() {
+        return this.botToken;
     }
 
 
