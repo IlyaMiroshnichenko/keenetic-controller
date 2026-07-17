@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # 1. Ваше Spring Boot приложение (Телеграм-бот и замерщик)
   app:
@@ -20,6 +22,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_ID=${ADMIN_ID}
       - TZ=Europe/Moscow
+      - TELEGRAM_BASE_URL=${TELEGRAM_BASE_URL}
     depends_on:
       - postgres
 

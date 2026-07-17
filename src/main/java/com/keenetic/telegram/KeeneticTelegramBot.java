@@ -5,6 +5,7 @@ import com.keenetic.service.KeeneticClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -20,29 +21,28 @@ import java.util.List;
 @Slf4j
 public class KeeneticTelegramBot extends TelegramLongPollingBot {
 
-    private final String botToken;
     private final String botName;
     private final KeeneticClientService keeneticClientService;
 
-    // Идеальный конструктор для работы напрямую или через системный DNS AntiZapret
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
             KeeneticClientService keeneticClientService) {
 
-        // Передаем токен в родительский класс для инициализации HttpClient
-        super(botToken);
-        this.botToken = botToken;
+        super(botToken); // Чистый заводской вызов ядра библиотеки 6.х
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
         log.info("Telegram бот '{}' успешно инициализирован.", botName);
     }
 
-    // КРИТИЧЕСКИ ВАЖНО: Библиотека 6.х обязана брать токен отсюда при выполнении методов!
-    @Override
-    public String getBotToken() {
-        return this.botToken;
+    private static DefaultBotOptions createBotOptions(String baseUrl) {
+        DefaultBotOptions options = new DefaultBotOptions();
+        // В версии 6.х метод setBaseUrl строго требует, чтобы адрес заканчивался на слэш /
+        if (baseUrl != null && !baseUrl.contains("api.telegram.org")) {
+            options.setBaseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
+        }
+        return options;
     }
 
     @Override
@@ -52,12 +52,12 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        // Проверяем, что пришло именно текстовое сообщение
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
             String username = update.getMessage().getFrom().getUserName();
-
-            if (username == null || !username.equals("IlyaMiroshnichenko")) {
+            if (!username.equals("IlyaMiroshnichenko")) {
                 sendMessage(chatId, "Недостаточно прав для выполнения операции.", createMainMenuKeyboard());
                 return;
             }
@@ -68,14 +68,15 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
                 case "/start":
                     sendWelcomeMessage(chatId);
                     break;
+
                 case "📊 Статус сигнала":
                     try {
                         sendSignalInfo(chatId);
                     } catch (Exception e) {
-                        log.error("Ошибка при получении данных с Keenetic: {}", e.getMessage());
-                        sendMessage(chatId, "⚠️ Не удалось получить данные с роутера. Проверьте сеть.", createMainMenuKeyboard());
+                        throw new RuntimeException(e);
                     }
                     break;
+
                 default:
                     sendMessage(chatId, "Неизвестная команда. Используйте кнопку ниже.", createMainMenuKeyboard());
                     break;
@@ -84,6 +85,7 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
     }
 
     // --- ЛОГИКА ОТВЕТОВ ---
+
     private void sendWelcomeMessage(long chatId) {
         String welcomeText = "Привет! Я бот для мониторинга роутера Keenetic.\nНажмите на кнопку ниже, чтобы проверить сигнал.";
         sendMessage(chatId, welcomeText, createMainMenuKeyboard());
@@ -102,15 +104,17 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
                 \n• RSRQ:\s""" + mobileSignalInfo.rsrq() + """
                 \n• SINR:\s""" + mobileSignalInfo.sinr() + """
                 """;
+
         sendMessage(chatId, response, createMainMenuKeyboard());
     }
 
     // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ОТПРАВКИ И КЛАВИАТУРЫ ---
+
     private void sendMessage(long chatId, String text, ReplyKeyboardMarkup keyboardMarkup) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
-        message.setParseMode("Markdown");
+        message.setParseMode("Markdown"); // Разрешает форматирование (жирный, курсив)
 
         if (keyboardMarkup != null) {
             message.setReplyMarkup(keyboardMarkup);
@@ -119,18 +123,21 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("Ошибка при отправке сообщения в Telegram для chatId {}: {}", chatId, e.getMessage());
+            log.error("Ошибка при отправке сообщения в Telegram для chatId {}: {}", chatId, e.getMessage(), e);
         }
     }
 
+    // Создание нижней панели с кнопками
     private ReplyKeyboardMarkup createMainMenuKeyboard() {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setSelective(true);
-        keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(false);
+        keyboardMarkup.setResizeKeyboard(true); // Кнопка подстроится под размер экрана телефона
+        keyboardMarkup.setOneTimeKeyboard(false); // Кнопка не будет скрываться после нажатия
 
         List<KeyboardRow> keyboard = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
+
+        // Создаем кнопку с текстом
         row.add(new KeyboardButton("📊 Статус сигнала"));
         keyboard.add(row);
 
@@ -138,6 +145,7 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
 
+    //Отправка сырых сообщений в бот
     public void sendRawMessage(long chatId, String text) {
         sendMessage(chatId, text, createMainMenuKeyboard());
     }
