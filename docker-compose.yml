@@ -1,13 +1,4 @@
 services:
-  # --- ДОБАВЛЯЕМ НЕУЯЗВИМЫЙ ЛОКАЛЬНЫЙ ПРОКСИ ---
-  telegram-proxy:
-    image: alpine/socat
-    container_name: keenetic-telegram-proxy
-    restart: always
-    # Команда перенаправляет трафик из контейнера бота в Telegram
-    # через защищенный AntiZapret IP-шлюз на полной скорости
-    command: tcp-listen:80,fork tcp-connect:api.telegram.org:443
-
   # 1. Ваше Spring Boot приложение (Телеграм-бот и замерщик)
   app:
     build: .
@@ -26,12 +17,8 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_ID=${ADMIN_ID}
       - TZ=Europe/Moscow
-      # --- МАГИЯ: Указываем Java использовать наш локальный прокси для обхода RUVDS ---
-      - JAVA_TOOL_OPTIONS=-Dhttps.proxyHost=telegram-proxy -Dhttps.proxyPort=80
     depends_on:
       - postgres
-      - telegram-proxy # Ждем старта локального прокси
-
 
   # 2. База данных PostgreSQL (Хранение истории метрик 4G сигнала)
   postgres:
@@ -56,7 +43,7 @@ services:
     environment:
       - TZ=Europe/Moscow
     ports:
-      - "3000:3000" # Доступна по адресу http://<IP_VDS>:3000
+      - "3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
     depends_on:
@@ -64,28 +51,26 @@ services:
 
   # 4. Jenkins (Локальная система безопасного CI/CD деплоя внутри VDS)
   jenkins:
-    image: jenkins/jenkins:lts-jdk17 # LTS-версия со встроенной Java 17
+    image: jenkins/jenkins:lts-jdk17
     container_name: keenetic-jenkins
     restart: always
     privileged: true
-    user: root # Запускаем от root, чтобы у Jenkins были права управлять сокетом Docker
+    user: root
     ports:
-      - "9090:8080" # Интерфейс Jenkins доступен по адресу http://<IP_VDS>:9090
+      - "9090:8080"
       - "50000:50000"
     environment:
-      - JAVA_OPTS=-Xmx1532m # Жестко ограничиваем аппетит Java для Jenkins, сохраняя ОЗУ
+      - JAVA_OPTS=-Xmx1532m
     volumes:
       - jenkins-data:/var/jenkins_home
       - /home/keenetic-controller:/home/keenetic-controller
-      # Пробрасываем исполняемые файлы и сокет докера с VDS внутрь контейнера Дженкинса.
-      # Это позволит Jenkins выполнять сборку 'docker compose build' локально на сервере!
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
       - /usr/libexec/docker/cli-plugins/docker-compose:/usr/libexec/docker/cli-plugins/docker-compose
     depends_on:
       - postgres
-# Изолированные тома данных на жестком диске VDS для защиты от потери информации
+
 volumes:
-  pgdata:         # Сохранит ваши таблицы и замеры в Postgres
-  grafana-data:   # Сохранит созданные дашборды и настройки в Графане
-  jenkins-data:   # Сохранит настроенные пайплайны, пользователей и плагины Jenkins
+  pgdata:
+  grafana-data:
+  jenkins-data:
