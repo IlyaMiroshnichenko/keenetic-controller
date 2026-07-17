@@ -21,24 +21,19 @@ import java.util.List;
 @Slf4j
 public class KeeneticTelegramBot extends TelegramLongPollingBot {
 
-    private final String botToken;
     private final String botName;
     private final KeeneticClientService keeneticClientService;
 
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
-            @Value("${telegram.base.url:https://telegram.org}") String baseUrl, // По умолчанию официальный URL со слэшем
             KeeneticClientService keeneticClientService) {
 
-        // Передаем в super объект опций с нашим Cloudflare URL
-        super(createBotOptions(baseUrl));
-
-        this.botToken = botToken;
+        super(botToken); // Чистый заводской вызов ядра библиотеки 6.х
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
-        log.info("Telegram бот '{}' запущен через умное Cloudflare-зеркало.", botName);
+        log.info("Telegram бот '{}' успешно инициализирован.", botName);
     }
 
     private static DefaultBotOptions createBotOptions(String baseUrl) {
@@ -49,13 +44,6 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
         }
         return options;
     }
-
-    @Override
-    public String getBotToken() {
-        return this.botToken;
-    }
-
-
 
     @Override
     public String getBotUsername() {

@@ -6,6 +6,9 @@ services:
     build: . # Docker соберет образ на основе вашего Dockerfile в текущей папке
     container_name: keenetic-app
     restart: always
+    dns:
+      - 195.123.220.117 # Официальный DNS-сервер AntiZapret
+      - 8.8.8.8
     ports:
       - "8080:8080"
     environment:
