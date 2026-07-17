@@ -11,5 +11,3 @@ telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
     name: ${TELEGRAM_BOT_NAME}
-  base:
-    url: ${TELEGRAM_BASE_URL:https://telegram.org}
