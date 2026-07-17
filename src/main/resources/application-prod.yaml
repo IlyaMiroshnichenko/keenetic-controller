@@ -8,5 +8,8 @@ spring:
       ddl-auto: update # На сервере таблицы создаются автоматически, но данные никогда не стираются
     show-sql: false
 telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN}
+    name: ${TELEGRAM_BOT_NAME}
   base:
     url: ${TELEGRAM_BASE_URL:https://telegram.org}
