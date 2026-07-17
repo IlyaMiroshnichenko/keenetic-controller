@@ -24,30 +24,35 @@ public class KeeneticTelegramBot extends TelegramLongPollingBot {
     private final String botName;
     private final KeeneticClientService keeneticClientService;
 
-    // Внедряем настройки, включая DefaultBotOptions
+    @Value("${telegram.base.url:https://telegram.org}")
+    private String baseUrl;
+
     public KeeneticTelegramBot(
             @Value("${telegram.bot.token}") String botToken,
             @Value("${telegram.bot.name}") String botName,
-            KeeneticClientService keeneticClientService,
-            DefaultBotOptions options) {
+            KeeneticClientService keeneticClientService) {
 
-        super(options); // <--- 1. Передаем опции прокси в родительский класс!
+        super(botToken); // Оставляем ваш стандартный рабочий вызов токена первой строкой
 
-        // 2. Токен теперь сохраняем локально, библиотека сама заберет его через ваш метод getBotToken()
-        this.botToken = botToken;
         this.botName = botName;
         this.keeneticClientService = keeneticClientService;
 
-        log.info("Telegram бот '{}' успешно инициализирован с поддержкой прокси.", botName);
+        // МУДРОСТЬ: Если в настройках передан кастомный URL Cloudflare —
+        // библиотека Telegram начнет слать HTTPS запросы через него!
+        if (baseUrl != null && !baseUrl.contains("api.telegram.org")) {
+            getOptions().setBaseUrl(baseUrl);
+        }
+
+        log.info("Telegram бот '{}' успешно инициализирован через Cloudflare-релей.", botName);
     }
 
     // Убедитесь, что у вас в коде поле botToken объявлено и метод getBotToken() возвращает его:
-    private final String botToken;
-
-    @Override
-    public String getBotToken() {
-        return this.botToken;
-    }
+//    private final String botToken;
+//
+//    @Override
+//    public String getBotToken() {
+//        return this.botToken;
+//    }
 
 
 

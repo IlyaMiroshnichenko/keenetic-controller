@@ -8,6 +8,5 @@ spring:
       ddl-auto: update # На сервере таблицы создаются автоматически, но данные никогда не стираются
     show-sql: false
 telegram:
-  proxy:
-    host: ${TELEGRAM_PROXY_HOST:}
-    port: ${TELEGRAM_PROXY_PORT:0}
+  base:
+    url: ${TELEGRAM_BASE_URL:https://telegram.org}
